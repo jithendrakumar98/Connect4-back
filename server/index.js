@@ -7,11 +7,25 @@ const connectDB = require("./src/config/db");
 const registerGameSocket = require("./src/sockets/gameSocket");
 const leaderboardRoutes = require("./src/routes/leaderboardRoutes");
 const playerRoutes = require("./src/routes/playerRoutes");
+const analyticsRoutes = require("./src/routes/analyticsRoutes");
 const { connectProducer } = require("./src/kafka/producer");
+const { startConsumer } = require("./src/kafka/consumer");
 
 dotenv.config();
-connectProducer();
-connectDB();
+
+const initializeApp = async () => {
+  try {
+    await connectDB();
+    await connectProducer();
+    await startConsumer();
+    console.log("✅ All services initialized");
+  } catch (err) {
+    console.error("❌ Initialization error:", err);
+    process.exit(1);
+  }
+};
+
+initializeApp();
 
 const app = express();
 app.use(cors());
@@ -20,6 +34,7 @@ app.use(express.json());
 app.get("/", (req, res) => res.send("Connect 4 backend running..."));
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/player", playerRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -29,7 +44,6 @@ const io = new Server(server, {
   }
 });
 
-// Pass the Socket.IO server to your gameSocket module
 registerGameSocket(io);
 
 const PORT = process.env.PORT || 4000;
