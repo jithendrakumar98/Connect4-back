@@ -45,7 +45,7 @@ connect4-backend/
 ├── src/
 │   ├── kafka/
 │   │   └── producer.js          # Kafka event producer
-│   │   └── producer.js          # Kafka event producer
+│   │   └── consumer.js          # Kafka event consumer
 │   ├── controllers/
 │   │   └── leaderboardController.js          # Leaderboard controller
 │   │   └── playerController.js               # Player Controller
