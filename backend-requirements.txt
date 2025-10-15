@@ -1,0 +1,8 @@
+express
+http
+socket.io
+cors
+dotenv
+mongoose
+nodemon
+kafkajs
