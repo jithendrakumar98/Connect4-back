@@ -1,7 +1,55 @@
 const { v4: uuidv4 } = require("uuid");
 const Game = require("../models/gameModel");
 const Player = require("../models/playerModel");
-const { sendGameEvent } = require("../kafka/producer");
+// const { sendGameEvent } = require("../kafka/producer"); // Kafka code commented out
+
+// await sendGameEvent({
+//   type: "game_completed",
+//   roomId: room.id,
+//   players: [room.player1.name, room.player2?.name || "BOT"],
+//   winner,
+//   duration: Date.now() - room.startTime,
+//   timestamp: Date.now()
+// });
+
+// await sendGameEvent({
+//   type: "room_created",
+//   roomId: room.id,
+//   player: playerName,
+//   timestamp: Date.now()
+// });
+
+// await sendGameEvent({
+//   type: "game_started",
+//   roomId: room.id,
+//   players: [room.player1.name, "BOT"],
+//   timestamp: Date.now()
+// });
+
+// await sendGameEvent({
+//   type: "game_started",
+//   roomId: room.id,
+//   players: [room.player1.name, room.player2.name],
+//   timestamp: Date.now()
+// });
+
+// await sendGameEvent({
+//   type: "move_made",
+//   roomId: room.id,
+//   player,
+//   col,
+//   row,
+//   timestamp: Date.now()
+// });
+
+// await sendGameEvent({
+//   type: "move_made",
+//   roomId: room.id,
+//   player: "BOT",
+//   col: botCol,
+//   row: botRow,
+//   timestamp: Date.now()
+// });
 
 const rooms = new Map();
 const disconnectedPlayers = new Map();
@@ -20,10 +68,11 @@ function checkWinner(board) {
   const ROWS = 6;
   const COLS = 7;
 
+  // Horizontal check
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS - 3; col++) {
       const val = board[col][row];
-      if (val && 
+      if (val &&
           val === board[col + 1][row] &&
           val === board[col + 2][row] &&
           val === board[col + 3][row]) {
@@ -32,6 +81,7 @@ function checkWinner(board) {
     }
   }
 
+  // Vertical check
   for (let col = 0; col < COLS; col++) {
     for (let row = 0; row < ROWS - 3; row++) {
       const val = board[col][row];
@@ -44,6 +94,7 @@ function checkWinner(board) {
     }
   }
 
+  // Diagonal /
   for (let col = 0; col < COLS - 3; col++) {
     for (let row = 3; row < ROWS; row++) {
       const val = board[col][row];
@@ -56,6 +107,7 @@ function checkWinner(board) {
     }
   }
 
+  // Diagonal \
   for (let col = 0; col < COLS - 3; col++) {
     for (let row = 0; row < ROWS - 3; row++) {
       const val = board[col][row];
@@ -68,6 +120,7 @@ function checkWinner(board) {
     }
   }
 
+  // Check for draw
   let isFull = true;
   for (let col = 0; col < COLS; col++) {
     if (board[col][0] === null) {
@@ -80,6 +133,7 @@ function checkWinner(board) {
 }
 
 function getBotMove(board, botPlayer, opponent) {
+  // Winning move
   for (let col = 0; col < 7; col++) {
     const tempBoard = board.map(column => [...column]);
     const row = dropDisc(tempBoard, col, botPlayer);
@@ -88,6 +142,7 @@ function getBotMove(board, botPlayer, opponent) {
     }
   }
 
+  // Block opponent
   for (let col = 0; col < 7; col++) {
     const tempBoard = board.map(column => [...column]);
     const row = dropDisc(tempBoard, col, opponent);
@@ -96,6 +151,7 @@ function getBotMove(board, botPlayer, opponent) {
     }
   }
 
+  // Prefer center columns
   const centerCols = [3, 2, 4, 1, 5, 0, 6];
   for (let col of centerCols) {
     if (board[col][0] === null) {
@@ -124,15 +180,6 @@ async function saveGameAndUpdateLeaderboard(room, winner) {
       );
     }
 
-    await sendGameEvent({
-      type: "game_completed",
-      roomId: room.id,
-      players: [room.player1.name, room.player2?.name || "BOT"],
-      winner,
-      duration: Date.now() - room.startTime,
-      timestamp: Date.now()
-    });
-
     console.log("✅ Game saved and leaderboard updated");
   } catch (err) {
     console.error("❌ Error saving game:", err);
@@ -150,14 +197,12 @@ module.exports = function(io) {
       if (disconnectedPlayer && disconnectedPlayer.roomId === roomId) {
         clearTimeout(disconnectedPlayer.timeout);
         disconnectedPlayers.delete(playerName);
-        
+
         room = rooms.get(roomId);
         if (room) {
-          if (room.player1.name === playerName) {
-            room.player1.socketId = socket.id;
-          } else if (room.player2 && room.player2.name === playerName) {
-            room.player2.socketId = socket.id;
-          }
+          if (room.player1.name === playerName) room.player1.socketId = socket.id;
+          else if (room.player2 && room.player2.name === playerName) room.player2.socketId = socket.id;
+
           socket.join(roomId);
           socket.emit("reconnected", {
             board: room.board,
@@ -183,15 +228,7 @@ module.exports = function(io) {
         };
         rooms.set(room.id, room);
         socket.join(room.id);
-        
         socket.emit("roomCreated", { roomId: room.id, playerName });
-
-        await sendGameEvent({
-          type: "room_created",
-          roomId: room.id,
-          player: playerName,
-          timestamp: Date.now()
-        });
 
         room.waitTimer = setTimeout(() => {
           if (!room.player2) {
@@ -199,7 +236,7 @@ module.exports = function(io) {
               message: "No opponent yet. Play with bot or wait 10 more seconds?" 
             });
 
-            room.waitTimer = setTimeout(async () => {
+            room.waitTimer = setTimeout(() => {
               if (!room.player2) {
                 room.player2 = { name: "BOT", socketId: "bot" };
                 room.botActive = true;
@@ -208,13 +245,6 @@ module.exports = function(io) {
                   roomId: room.id,
                   player1: room.player1.name,
                   player2: "BOT"
-                });
-
-                await sendGameEvent({
-                  type: "game_started",
-                  roomId: room.id,
-                  players: [room.player1.name, "BOT"],
-                  timestamp: Date.now()
                 });
               }
             }, 10000);
@@ -231,19 +261,12 @@ module.exports = function(io) {
           player1: room.player1.name,
           player2: room.player2.name
         });
-
-        await sendGameEvent({
-          type: "game_started",
-          roomId: room.id,
-          players: [room.player1.name, room.player2.name],
-          timestamp: Date.now()
-        });
       } else {
         socket.emit("error", "Room is full");
       }
     });
 
-    socket.on("startWithBot", async ({ roomId }) => {
+    socket.on("startWithBot", ({ roomId }) => {
       const room = rooms.get(roomId);
       if (!room || room.player2) return;
 
@@ -256,105 +279,55 @@ module.exports = function(io) {
         player1: room.player1.name,
         player2: "BOT"
       });
-
-      await sendGameEvent({
-        type: "game_started",
-        roomId: room.id,
-        players: [room.player1.name, "BOT"],
-        timestamp: Date.now()
-      });
     });
 
-    socket.on("drop", async ({ col }) => {
+    socket.on("drop", ({ col }) => {
       const room = Array.from(rooms.values()).find(r =>
         r.player1.socketId === socket.id || 
         (r.player2 && r.player2.socketId === socket.id)
       );
-      
       if (!room) return;
 
-      const player = room.player1.socketId === socket.id 
-        ? room.player1.name 
-        : room.player2.name;
-
+      const player = room.player1.socketId === socket.id ? room.player1.name : room.player2.name;
       if (room.turn !== player) return;
 
       const playerValue = player === room.player1.name ? "Player1" : "Player2";
-
       const row = dropDisc(room.board, col, playerValue);
       if (row === -1) {
         socket.emit("error", "Column is full");
         return;
       }
 
-      await sendGameEvent({
-        type: "move_made",
-        roomId: room.id,
-        player,
-        col,
-        row,
-        timestamp: Date.now()
-      });
-
       const winner = checkWinner(room.board);
-      
       if (winner) {
         const winnerName = winner === "draw" ? "draw" : (winner === "Player1" ? room.player1.name : room.player2.name);
-        
-        io.to(room.id).emit("gameOver", {
-          board: room.board,
-          winner: winnerName
-        });
-
-        await saveGameAndUpdateLeaderboard(room, winnerName);
+        io.to(room.id).emit("gameOver", { board: room.board, winner: winnerName });
+        saveGameAndUpdateLeaderboard(room, winnerName);
         rooms.delete(room.id);
         return;
       }
 
       room.turn = player === room.player1.name ? room.player2.name : room.player1.name;
 
-      io.to(room.id).emit("move_made", {
-        board: room.board,
-        turn: room.turn
-      });
+      io.to(room.id).emit("move_made", { board: room.board, turn: room.turn });
 
       if (room.botActive && room.turn === "BOT") {
-        setTimeout(async () => {
+        setTimeout(() => {
           const botCol = getBotMove(room.board, "Player2", "Player1");
           const botRow = dropDisc(room.board, botCol, "Player2");
-          
           if (botRow === -1) return;
 
-          await sendGameEvent({
-            type: "move_made",
-            roomId: room.id,
-            player: "BOT",
-            col: botCol,
-            row: botRow,
-            timestamp: Date.now()
-          });
-
           const botWinner = checkWinner(room.board);
-          
           if (botWinner) {
             const winnerName = botWinner === "draw" ? "draw" : (botWinner === "Player2" ? "BOT" : room.player1.name);
-            
-            io.to(room.id).emit("gameOver", {
-              board: room.board,
-              winner: winnerName
-            });
-
-            await saveGameAndUpdateLeaderboard(room, winnerName);
+            io.to(room.id).emit("gameOver", { board: room.board, winner: winnerName });
+            saveGameAndUpdateLeaderboard(room, winnerName);
             rooms.delete(room.id);
             return;
           }
 
           room.turn = room.player1.name;
-
-          io.to(room.id).emit("move_made", {
-            board: room.board,
-            turn: room.turn
-          });
+          io.to(room.id).emit("move_made", { board: room.board, turn: room.turn });
         }, 500);
       }
     });
@@ -365,47 +338,33 @@ module.exports = function(io) {
         r.player1.socketId === socket.id || 
         (r.player2 && r.player2.socketId === socket.id)
       );
-      
-      if (room) {
-        const disconnectedPlayerName = room.player1.socketId === socket.id 
-          ? room.player1.name 
-          : room.player2?.name;
+      if (!room) return;
 
-        if (disconnectedPlayerName && disconnectedPlayerName !== "BOT") {
-          disconnectedPlayers.set(disconnectedPlayerName, {
-            roomId: room.id,
-            timeout: setTimeout(() => {
-              const remainingPlayer = room.player1.socketId === socket.id 
-                ? room.player2 
-                : room.player1;
-              
-              if (remainingPlayer && remainingPlayer.socketId !== "bot") {
-                io.to(remainingPlayer.socketId).emit("opponentDisconnected", {
-                  message: "Opponent disconnected. You win!"
-                });
+      const disconnectedPlayerName = room.player1.socketId === socket.id ? room.player1.name : room.player2?.name;
+      if (!disconnectedPlayerName || disconnectedPlayerName === "BOT") return;
 
-                saveGameAndUpdateLeaderboard(room, remainingPlayer.name);
-              }
-              
-              disconnectedPlayers.delete(disconnectedPlayerName);
-              rooms.delete(room.id);
-              console.log(`❌ Player ${disconnectedPlayerName} forfeited (30s timeout)`);
-            }, 30000)
-          });
-
-          const remainingPlayer = room.player1.socketId === socket.id 
-            ? room.player2 
-            : room.player1;
-
+      disconnectedPlayers.set(disconnectedPlayerName, {
+        roomId: room.id,
+        timeout: setTimeout(() => {
+          const remainingPlayer = room.player1.socketId === socket.id ? room.player2 : room.player1;
           if (remainingPlayer && remainingPlayer.socketId !== "bot") {
-            io.to(remainingPlayer.socketId).emit("opponentDisconnectedWaiting", {
-              message: `${disconnectedPlayerName} disconnected. Waiting 30s for reconnection...`
-            });
+            io.to(remainingPlayer.socketId).emit("opponentDisconnected", { message: "Opponent disconnected. You win!" });
+            saveGameAndUpdateLeaderboard(room, remainingPlayer.name);
           }
+          disconnectedPlayers.delete(disconnectedPlayerName);
+          rooms.delete(room.id);
+          console.log(`❌ Player ${disconnectedPlayerName} forfeited (30s timeout)`);
+        }, 30000)
+      });
 
-          console.log(`⏱️ Player ${disconnectedPlayerName} has 30 seconds to reconnect`);
-        }
+      const remainingPlayer = room.player1.socketId === socket.id ? room.player2 : room.player1;
+      if (remainingPlayer && remainingPlayer.socketId !== "bot") {
+        io.to(remainingPlayer.socketId).emit("opponentDisconnectedWaiting", {
+          message: `${disconnectedPlayerName} disconnected. Waiting 30s for reconnection...`
+        });
       }
+
+      console.log(`⏱️ Player ${disconnectedPlayerName} has 30 seconds to reconnect`);
     });
   });
 };

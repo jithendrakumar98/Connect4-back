@@ -8,17 +8,17 @@ const registerGameSocket = require("./src/sockets/gameSocket");
 const leaderboardRoutes = require("./src/routes/leaderboardRoutes");
 const playerRoutes = require("./src/routes/playerRoutes");
 const analyticsRoutes = require("./src/routes/analyticsRoutes");
-const { connectProducer } = require("./src/kafka/producer");
-const { startConsumer } = require("./src/kafka/consumer");
+// const { connectProducer } = require("./src/kafka/producer");
+// const { startConsumer } = require("./src/kafka/consumer");
 
 dotenv.config();
 
 const initializeApp = async () => {
   try {
     await connectDB();
-    await connectProducer();
-    await startConsumer();
-    console.log("✅ All services initialized");
+    // await connectProducer();
+    // await startConsumer();
+    //console.log("✅ All services initialized (Kafka disabled)");
   } catch (err) {
     console.error("❌ Initialization error:", err);
     process.exit(1);
