@@ -73,6 +73,7 @@ connect4-backend/
 ├── package.json                 # Dependencies
 └── README.md                    # Documentation
 ```
+<img width="3691" height="2596" alt="Untitled diagram-2025-10-15-144126" src="https://github.com/user-attachments/assets/bc15cc8e-18e7-4571-bad9-bd0d5f9980af" />
 
 ---
 
