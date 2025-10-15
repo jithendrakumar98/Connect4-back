@@ -1,206 +1,381 @@
-# 🎮 Connect 4 — Backend Server (Express + Socket.IO)
+# Connect 4 Backend Server
 
-> ⚡ Real-time backend for the **Connect 4 Multiplayer Game** built using **Node.js**, **Express**, **Socket.IO**, and **MongoDB**.  
-> Includes optional **Kafka integration** for event streaming — commented out for Render hosting.
+[![Node.js](https://img.shields.io/badge/Node.js-16+-339933?style=flat&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Express-4.x-000000?style=flat&logo=express&logoColor=white)](https://expressjs.com/)
+[![Socket.IO](https://img.shields.io/badge/Socket.IO-4.x-010101?style=flat&logo=socket.io&logoColor=white)](https://socket.io/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-5.x-47A248?style=flat&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 
----
-
-## 🧩 Overview
-
-This backend powers a real-time Connect 4 game, allowing two players to compete in the same room with automatic turn switching, leaderboard tracking, and persistent data storage.
+A real-time multiplayer backend server for Connect 4, built with Node.js, Express, Socket.IO, and MongoDB. Features live game synchronization, player management, leaderboard tracking, and optional Kafka integration for event streaming.
 
 ---
 
-## 🚀 Quick Start (Local Setup)
+## Table of Contents
 
-### 1️⃣ Clone the Repository
+- [Features](#features)
+- [Architecture](#architecture)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Running the Server](#running-the-server)
+- [Deployment](#deployment)
+- [API Reference](#api-reference)
+- [Kafka Integration](#kafka-integration)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
-git clone https://github.com/<your-username>/connect4.git
+
+## Features
+
+- **Real-time Gameplay** — Socket.IO-powered bidirectional communication
+- **Room Management** — Automatic player matching and room creation
+- **Turn-based Logic** — Server-side validation and game state management
+- **Persistent Storage** — MongoDB integration for player data and game history
+- **Leaderboard System** — Track wins, losses, and player rankings
+- **Event Streaming** — Optional Kafka integration for analytics and logging
+- **Production Ready** — Optimized for deployment on cloud platforms
+
+---
+
+## Architecture
+
+```
+connect4-backend/
+├── src/
+│   ├── kafka/
+│   │   └── producer.js          # Kafka event producer
+│   │   └── producer.js          # Kafka event producer
+│   ├── controllers/
+│   │   └── leaderboardController.js          # Leaderboard controller
+│   │   └── playerController.js               # Player Controller
+│   ├── models/
+│   │   └── gameModel.js         # MongoDB Gmae schema
+│   │   └── analyticsModel.js    # MongoDB analytics schema
+│   │   └── playerModel.js       # MongoDB player schema
+│   ├── routes/
+│   │   └── leaderboard.js       # Leaderboard API routes
+│   │   └── analyticsRoutes.js   # analyticsRoutes API routes
+│   │   └── playerRoutes.js      # playerRoutes API routes
+│   ├── config/
+│   │   └── db.js                # Database connection
+│   └── sockets/
+│   │     └── gameSocket.js        # Socket.IO
+│   └── utils/
+│   │    └── gameLogic.js          #  game logic
+│   └── services/
+│       └── botService.js          # Bot logic
+│       └── gameService.js         # Game service
+│       └── matchmakingService.js  # MatchMaking
+├── .env                         # Environment template
+├── docker-compose.yml           # Kafka local setup
+├── index.js                     # Server entry point
+├── package.json                 # Dependencies
+└── README.md                    # Documentation
+```
+
+---
+
+## Prerequisites
+
+Ensure you have the following installed:
+
+- **Node.js** (v16 or higher) — [Download](https://nodejs.org/)
+- **npm** or **yarn** — Package manager
+- **MongoDB** — Local instance or [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+- **Docker** (optional) — For local Kafka setup
+
+---
+
+## Installation
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/jithendrakumar98/connect4.git
 cd connect4
+```
 
-2️⃣ Install Dependencies
+### 2. Install Dependencies
 
-You can install all required packages in one go using the backend-requirements.txt file.
-
-💻 For Linux / macOS:
-xargs npm install < backend-requirements.txt
-
-💻 For Windows PowerShell:
-Get-Content backend-requirements.txt | ForEach-Object { npm install $_ }   OR npm install
-
-3️⃣ Setup Environment Variables
-
-Create a .env file in your backend folder:
-
-touch .env
-
-
-Add your configurations:
-
-PORT=4000
-MONGO_URI=mongodb+srv://<your-mongo-uri>
-# Uncomment Kafka if using it
-# KAFKA_BROKER=localhost:9092
-
-
-⚠️ When deploying on Render, keep Kafka lines commented, since Kafka requires a separate paid hosting service.
-
-4️⃣ Start the Server
-🧠 Development Mode:
-npx nodemon server.js
-
-🚀 Production Mode:
-node server.js
-
-
-When the server starts successfully, you’ll see:
-
-🚀 Server running on port 4000
-
-
-You can now visit:
-👉 http://localhost:4000
-
-☁️ Render Deployment Guide
-
-Render is a great free hosting option for this backend.
-
-🔹 Build Command:
+**Option A: Using npm**
+```bash
 npm install
+```
 
-🔹 Start Command:
-node server.js
+**Option B: Using backend-requirements.txt**
 
-⚠️ Important Note:
+*Linux/macOS:*
+```bash
+xargs npm install < backend-requirements.txt
+```
 
-Kafka is commented out in:
+*Windows PowerShell:*
+```powershell
+Get-Content backend-requirements.txt | ForEach-Object { npm install $_ }
+```
 
-index.js (or server.js)
+### 3. Required Packages
 
-src/sockets/gameSocket.js
+The following packages will be installed:
 
-You can uncomment these lines once you have a Kafka service running externally.
+- `express` — Web framework
+- `socket.io` — Real-time communication
+- `mongoose` — MongoDB ODM
+- `dotenv` — Environment variable management
+- `cors` — Cross-origin resource sharing
+- `kafkajs` — Kafka client (optional)
+- `nodemon` — Development auto-reload
 
-Example (in index.js):
+---
 
-// const { connectProducer } = require("./src/kafka/producer");
-// connectProducer();
+## Configuration
 
+### Environment Variables
 
-Uncomment when ready:
+Create a `.env` file in the project root:
 
+```bash
+touch .env
+```
+
+Add the following configuration:
+
+```env
+# Server Configuration
+PORT=4000
+NODE_ENV=development
+
+# Database
+MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/connect4?retryWrites=true&w=majority
+
+# Kafka (Optional - uncomment when ready)
+# KAFKA_BROKER=localhost:9092
+# KAFKA_CLIENT_ID=connect4-backend
+```
+
+**Security Note:** Never commit your `.env` file. Add it to `.gitignore`.
+
+---
+
+## Running the Server
+
+### Development Mode
+
+Automatically restarts on file changes:
+
+```bash
+npm run dev
+# or
+npx nodemon index.js
+```
+
+### Production Mode
+
+```bash
+npm start
+# or
+node index.js
+```
+
+### Verify Server is Running
+
+The console should display:
+
+```
+🚀 Server running on port 4000
+✅ Connected to MongoDB
+```
+
+Visit `http://localhost:4000` to see the health check response:
+
+```json
+{
+  "status": "online",
+  "message": "Connect 4 backend running..."
+}
+```
+
+---
+
+## Deployment
+
+### Deploying to Render
+
+[Render](https://render.com/) offers free hosting for Node.js applications.
+
+#### Configuration
+
+1. **Create New Web Service** on Render
+2. **Connect GitHub Repository**
+3. **Configure Build Settings:**
+
+| Setting | Value |
+|---------|-------|
+| **Build Command** | `npm install` |
+| **Start Command** | `node index.js` |
+| **Environment** | Node |
+
+4. **Add Environment Variables:**
+   - `PORT` — Auto-assigned by Render
+   - `MONGO_URI` — Your MongoDB connection string
+   - `NODE_ENV` — `production`
+
+5. **Deploy**
+
+#### Important: Kafka on Render
+
+Kafka requires a separate hosting service and is **commented out by default**. To enable:
+
+1. Set up Kafka on a service like [CloudKarafka](https://www.cloudkarafka.com/) or [Confluent Cloud](https://www.confluent.io/confluent-cloud/)
+2. Uncomment Kafka code in `index.js` and `src/sockets/gameSocket.js`
+3. Add `KAFKA_BROKER` to environment variables
+
+---
+
+## API Reference
+
+### HTTP Endpoints
+
+| Method | Endpoint | Description | Response |
+|--------|----------|-------------|----------|
+| `GET` | `/` | Health check | `{ status: "online", message: "..." }` |
+| `GET` | `/api/leaderboard` | Fetch top players | `[{ name, wins, losses, gamesPlayed }]` |
+| `POST` | `/api/player` | Create/update player | `{ success: true, player: {...} }` |
+
+### Socket.IO Events
+
+#### Client → Server
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `joinRoom` | `{ roomId, playerName }` | Join or create game room |
+| `makeMove` | `{ roomId, column, playerId }` | Drop piece in column |
+| `disconnect` | — | Handle player disconnect |
+
+#### Server → Client
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `roomJoined` | `{ roomId, players, board }` | Confirmation of room join |
+| `gameStart` | `{ currentPlayer }` | Both players ready |
+| `moveMade` | `{ board, nextPlayer }` | Move validated |
+| `gameOver` | `{ winner, board }` | Game completed |
+| `error` | `{ message }` | Error notification |
+
+---
+
+## Kafka Integration
+
+Kafka is used for event streaming and analytics (optional feature).
+
+### Local Setup with Docker
+
+#### 1. Start Kafka Services
+
+Ensure Docker is running, then execute:
+
+```bash
+docker-compose up -d
+```
+
+This starts:
+- **Zookeeper** on `localhost:2181`
+- **Kafka** on `localhost:9092`
+
+#### 2. Verify Containers
+
+```bash
+docker ps
+```
+
+You should see both `zookeeper` and `kafka` containers running.
+
+#### 3. Enable Kafka in Code
+
+**In `index.js`:**
+```javascript
+// Uncomment these lines:
 const { connectProducer } = require("./src/kafka/producer");
 connectProducer();
+```
 
-🧰 API Overview
-Method	Endpoint	Description
-GET	/	Health check endpoint
-GET	/api/leaderboard	Fetch leaderboard data
-POST	/api/player	Add or update player info
-Socket.IO	joinRoom	Player joins a game room
-Socket.IO	makeMove	Player makes a move
-🧱 Optional: Enable Kafka (Local Setup)
+**In `src/sockets/gameSocket.js`:**
+```javascript
+// Uncomment Kafka event publishing logic
+```
 
-Kafka integration is used for event tracking and analytics.
-You can run it locally with Docker.
+#### 4. Restart Server
 
-1️⃣ find docker-compose.yml
-
-In your backend folder, find a file named docker-compose.yml:
-
-2️⃣ Start Kafka Services
-#docker-compose up -d
-
-
-You’ll see both zookeeper and kafka containers running:
-
-#docker ps
-
-3️⃣ Uncomment Kafka Code
-
-In both files below, uncomment all Kafka-related lines:
-
-server.js (or index.js)
-
-src/sockets/gameSocket.js
-
-Then restart your backend:
-
+```bash
 npm run dev
+```
 
+### Kafka Events
 
-✅ Kafka will now listen on localhost:9092.
+The following game events are published:
 
-🔍 Verify Backend
-1️⃣ Health Check
+- `game.started` — New game begins
+- `move.made` — Player makes a move
+- `game.ended` — Game concludes with winner
 
-Visit:
+---
 
-http://localhost:4000
+## Troubleshooting
 
+### Common Issues
 
-Response:
+| Issue | Possible Cause | Solution |
+|-------|---------------|----------|
+| **Port already in use** | Another process on port 4000 | Change `PORT` in `.env` or kill process: `lsof -ti:4000 \| xargs kill -9` |
+| **MongoDB connection failed** | Invalid URI or network issue | Verify `MONGO_URI` format and network access |
+| **Socket.IO connection refused** | Frontend pointing to wrong URL | Update frontend `.env` with correct backend URL |
+| **Kafka connection error** | Kafka not running | Start Docker Compose or comment out Kafka code |
+| **CORS errors** | Origin not whitelisted | Update CORS configuration in `index.js` |
 
-Connect 4 backend running...
+### Debug Mode
 
-2️⃣ API Check
+Enable verbose logging:
 
-Use Postman or browser to test:
+```bash
+DEBUG=socket.io* node index.js
+```
 
-GET http://localhost:4000/api/leaderboard
+---
 
-🧠 Troubleshooting
-Issue	Cause	Solution
-PORT already in use	Another process using port	Change PORT in .env
-MongoDB connection error	Invalid URI	Check MONGO_URI format
-Socket.IO connection refused	Wrong frontend backend URL	Update frontend .env
-Kafka connection refused	Kafka not running	Start Docker or comment Kafka lines
-🧾 backend-requirements.txt (Reference)
+## Contributing
 
-If you lose it, here’s the content to recreate it:
+Contributions are welcome! Please follow these steps:
 
-express
-socket.io
-mongoose
-dotenv
-cors
-kafkajs
-nodemon
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-🧩 Example Commands Summary
-# Clone repo
-git clone https://github.com/<your-username>/connect4.git
-cd connect4/backend
+### Development Guidelines
 
-# Install dependencies
-xargs npm install < backend-requirements.txt
+- Follow existing code style
+- Write meaningful commit messages
+- Test thoroughly before submitting
+- Update documentation as needed
 
-# Create environment file
-touch .env
+---
 
-# Run locally
-node server.js
+## Credits
 
-# OR (auto restart for dev)
-npx nodemon server.js
+**Developed by** [Jithendra Kumar Arthimalla](https://github.com/jithendrakumar98)
 
-# Start Kafka services
-docker-compose up -d
+Built with ❤️ using Node.js, Express, Socket.IO, and MongoDB.
 
-# Deploy on Render
-npm install
-node server.js
+---
 
-🧡 Credits
+## Support
 
-Developed by Jithendra Kumar
-Real-time backend system for the Connect 4 Multiplayer Game
-Built with ❤️ using Node.js, Express, Socket.IO, and MongoDB
+For issues and questions:
+- **GitHub Issues:** [Create an issue](https://github.com/jithendrakumar98/connect4/issues)
+- **Email:** [Contact developer](mailto:2200030165cseh@gmail.com)
 
-💡 Notes
+---
 
-🟢 Kafka integration is optional — commented for Render free-tier support.
-🟢 Uncomment the Kafka lines in index.js and gameSocket.js only when a Kafka broker is available.
-🟢 Recommended to use Docker locally for full functionality.
-
+**[⬆ Back to Top](#connect-4-backend-server)**
